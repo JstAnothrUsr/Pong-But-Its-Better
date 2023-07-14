@@ -8,6 +8,11 @@ Color Match (ball switches between 4 colors randomly when it enters the center, 
 Teleportation Mode (click to teleport paddle to any desired location on your side of the field when cooldown finishes)
 Gravity + Gravity Flipping
 
+Also, I'm noticing the Black Holes mode can get a bit framey at times.
+
+A few modes (e.g. the lag and time modes) use list based timers (every tick append an item to a list, if the length 
+of that list exceeds 60 * number_of_seconds_for_event then you clear the list and perform some action.
+Is there any better way to accomplish this?
 
 :( :( :( :( :( :( :( :( :( Prolly not happening :( :( :( :( :( :( :( :( :( :( :( :(
 Random Walls(IMPLEMENTED THEN DELETED DUE TO TERRIBLE PHYSICS)
