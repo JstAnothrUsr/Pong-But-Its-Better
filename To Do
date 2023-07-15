@@ -2,15 +2,19 @@
 A BETTER NAME PLEASE
 
 Modes:
-Fire and Ice Ball Powerups (fast and slow, or fast ball and slow or frozen paddle once ball makes contact)
-Swap Paddle Position (maybe, too OP), Smash (hit the ball really hard), Uncontrollable Speed for Opponent, Time Warp (slow down time except for yourself, in progress) press enter to activate, 7 second cooldown
+Time Warp (slow down time except for yourself, mode done, computer logic is in progress) press shift key to activate
+Fire and Ice Ball Powerups (fast and slow, or fast ball and slow or frozen paddle once ball makes contact with said paddle, hit a floating stationary ball of red or blue (fire/ice) color with ball to activate)
+Swap Paddle Position (maybe, too OP), shift key to activate
+Smash (hit the ball really hard), shift key to activate
+Uncontrollable Speed for Opponent, shift key to activate
+
 Color Match (ball switches between 4 colors randomly when it enters the center, players must press enter to change paddle color to matching color, otherwise point is lost, regular rules also apply)
 Teleportation Mode (click to teleport paddle to any desired location on your side of the field when cooldown finishes)
 Gravity + Gravity Flipping
 
-Also, I'm noticing the Black Holes mode can get a bit framey at times.
+Also, I'm noticing the Black Holes mode can get a bit framey at times, don't know if that's just my computer's fault.
 
-A few modes (e.g. the lag and time modes) use list based timers (every tick append an item to a list, if the length 
+A few modes (e.g. the lag and time modes) use list based timers (every frame append an item to a list, if the length 
 of that list exceeds 60 * number_of_seconds_for_event then you clear the list and perform some action.
 Is there any better way to accomplish this?
 
