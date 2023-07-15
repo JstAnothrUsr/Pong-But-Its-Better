@@ -592,13 +592,21 @@ def draw_objects():
     pygame.display.update()
 
 def move_computer_paddle():
-    global comp_y, window_top, window_bottom
+    global comp_y, window_top, window_bottom, selected_difficulty
+
     # Calculate predicted position of the ball
     if ball_x_speed != 0:
         predicted_y = ball_y + ((comp_x - ball_x) / ball_x_speed) * ball_y_speed
 
         # Calculate the margin for contact
         contact_margin = paddle_height * 0.3
+
+        # Account for bounces off the top and bottom of the window only on Asian mode
+        if selected_difficulty == 3:
+            if predicted_y < 0:
+                predicted_y = abs(predicted_y)
+            elif predicted_y > window_height:
+                predicted_y = 2 * window_height - predicted_y
 
         # Move the computer paddle towards the predicted position within the contact margin
         if predicted_y < comp_y + paddle_height / 2 - contact_margin and comp_y > window_top:
