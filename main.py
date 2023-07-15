@@ -51,6 +51,7 @@ grey = (200, 200, 200)
 orange = (230, 138, 0)
 red = (255, 0, 0)
 blue = (51, 51, 255)
+green = (0, 255, 0)
 
 # UNLOCK DIFFICULTIES
 difficulties_unlocked = 0
@@ -60,9 +61,9 @@ pause_button_rect = pygame.Rect(5, 5, 20, 20)
 pause_button_clicked = False
 
 # SOUND FX
-#Background_Music = pygame.mixer.Sound("BG Music 2.mp3")
-#Background_Music.play(loops=50000000)
-#Background_Music.set_volume(0.7)
+Background_Music = pygame.mixer.Sound("BG Music 2.mp3")
+Background_Music.play(loops=50000000)
+Background_Music.set_volume(0.7)
 
 # PADDLE DIMENSION
 paddle_width = 14
@@ -96,7 +97,7 @@ selected_difficulty = 0
 selected_points = 5
 selected_players = 0
 selected_mode = 0
-modes = ["Normal", "Confused Keyboard", "Black Holes", "Mini Mode", "Going Blind?", "Light Lag", "McDonald's Lag", "Moon Lag", "Mars Lag", "Time Warp", "Time Attack"]
+modes = ["Normal", "Confused Keyboard", "Black Holes", "Mini Mode", "Going Blind?", "Enter the Matrix", "Light Lag", "McDonald's Lag", "Moon Lag", "Mars Lag", "Time Attack"]
 
 # PADDLE MOVEMENT
 player_move_up = False
@@ -104,7 +105,8 @@ player_move_down = False
 player2_move_up = False
 player2_move_down = False
 
-player_movement_speed = 5
+player1_movement_speed = 5
+player2_movement_speed = 5
 comp_movement_speed = 3
 
 # SCORE VARIABLES
@@ -113,12 +115,16 @@ comp_score = 0
 points_to_win = 21
 
 # TIME WARP
-time_warp_ready = False
-time_warped = False
-time_warp_cooldown = []
+time_warp_ready_p1 = False
+time_warp_ready_p2 = False
+time_warped_by_p1 = False
+time_warped_by_p2 = False
+time_warp_cooldown_p1 = []
+time_warp_cooldown_p2 = []
 
 # SCORE FONT
 score_font = pygame.font.Font('Atari.TTF', 20)
+tutorial_font = pygame.font.Font('Atari.TTF', 15)
 
 # BALL RESPAWN TIMER
 respawn_time = 1.5
@@ -171,6 +177,7 @@ def angle_from_collision_computer(next_ball_x, next_ball_y):
         dist_y = next_ball_y - paddle_center_y
         ball_x_speed = dist_x * -0.25 - 5
         ball_y_speed = dist_y * 0.25
+
 def create_black_holes():
     global black_holes
 
@@ -342,27 +349,27 @@ def create_clocks():
                 break
 
 def update_paddles():
-    global modes, comp_y, player_y, selected_mode, window_left, window_right, window_top, window_bottom, input_list_p1, input_list_p2
+    global modes, comp_y, player_y, selected_mode, window_left, window_right, window_top, window_bottom, input_list_p1, input_list_p2, player2_movement_speed, player1_movement_speed
 
     if modes[selected_mode] == "Confused Keyboard":
         # Player 1
-        if player_move_down and player_y - player_movement_speed >= window_top:
-            player_y -= player_movement_speed
-        elif player_move_down and player_y - player_movement_speed <= window_top:
+        if player_move_down and player_y - player1_movement_speed >= window_top:
+            player_y -= player1_movement_speed
+        elif player_move_down and player_y - player1_movement_speed <= window_top:
             player_y = window_top
-        elif player_move_up and player_y + player_movement_speed <= window_bottom - paddle_height:
-            player_y += player_movement_speed
-        elif player_move_up and player_y + player_movement_speed >= window_bottom - paddle_height:
+        elif player_move_up and player_y + player1_movement_speed <= window_bottom - paddle_height:
+            player_y += player1_movement_speed
+        elif player_move_up and player_y + player1_movement_speed >= window_bottom - paddle_height:
             player_y += window_bottom - paddle_height - player_y
 
         # Player 2
-        if player2_move_down and comp_y - player_movement_speed >= window_top:
-            comp_y -= player_movement_speed
-        elif player2_move_down and comp_y - player_movement_speed <= window_top:
+        if player2_move_down and comp_y - player2_movement_speed >= window_top:
+            comp_y -= player2_movement_speed
+        elif player2_move_down and comp_y - player2_movement_speed <= window_top:
             comp_y = window_top
-        elif player2_move_up and comp_y + player_movement_speed <= window_bottom - paddle_height:
-            comp_y += player_movement_speed
-        elif player2_move_up and comp_y + player_movement_speed >= window_bottom - paddle_height:
+        elif player2_move_up and comp_y + player2_movement_speed <= window_bottom - paddle_height:
+            comp_y += player2_movement_speed
+        elif player2_move_up and comp_y + player2_movement_speed >= window_bottom - paddle_height:
             comp_y += window_bottom - paddle_height - comp_y
 
     elif modes[selected_mode] in ["Light Lag", "McDonald's Lag", "Moon Lag", "Mars Lag"]:
@@ -382,14 +389,14 @@ def update_paddles():
 
             # Use the oldest input and react appropriately for Player 1
             if oldest_input_p1 == "up":
-                if player_y - player_movement_speed >= window_top:
-                    player_y -= player_movement_speed
-                elif player_y - player_movement_speed <= window_top:
+                if player_y - player1_movement_speed >= window_top:
+                    player_y -= player1_movement_speed
+                elif player_y - player1_movement_speed <= window_top:
                     player_y = window_top
             elif oldest_input_p1 == "down":
-                if player_y + player_movement_speed <= window_bottom - paddle_height:
-                    player_y += player_movement_speed
-                elif player_y + player_movement_speed >= window_bottom - paddle_height:
+                if player_y + player1_movement_speed <= window_bottom - paddle_height:
+                    player_y += player1_movement_speed
+                elif player_y + player1_movement_speed >= window_bottom - paddle_height:
                     player_y += window_bottom - paddle_height - player_y
 
         if len(input_list_p2) >= 30:
@@ -397,14 +404,14 @@ def update_paddles():
 
             # Use the oldest input and react appropriately for Player 2
             if oldest_input_p2 == "up":
-                if comp_y - player_movement_speed >= window_top:
-                    comp_y -= player_movement_speed
-                elif comp_y - player_movement_speed <= window_top:
+                if comp_y - player2_movement_speed >= window_top:
+                    comp_y -= player2_movement_speed
+                elif comp_y - player2_movement_speed <= window_top:
                     comp_y = window_top
             elif oldest_input_p2 == "down":
-                if comp_y + player_movement_speed <= window_bottom - paddle_height:
-                    comp_y += player_movement_speed
-                elif comp_y + player_movement_speed >= window_bottom - paddle_height:
+                if comp_y + player2_movement_speed <= window_bottom - paddle_height:
+                    comp_y += player2_movement_speed
+                elif comp_y + player2_movement_speed >= window_bottom - paddle_height:
                     comp_y += window_bottom - paddle_height - comp_y
 
         # Append new inputs for both players
@@ -424,32 +431,32 @@ def update_paddles():
 
     else: # OTHER MODES
         # Player 1
-        if player_move_up and player_y - player_movement_speed >= window_top:
-            player_y -= player_movement_speed
-        elif player_move_up and player_y - player_movement_speed <= window_top:
+        if player_move_up and player_y - player1_movement_speed >= window_top:
+            player_y -= player1_movement_speed
+        elif player_move_up and player_y - player1_movement_speed <= window_top:
             player_y = window_top
-        elif player_move_down and player_y + player_movement_speed <= window_bottom - paddle_height:
-            player_y += player_movement_speed
-        elif player_move_down and player_y + player_movement_speed >= window_bottom - paddle_height:
+        elif player_move_down and player_y + player1_movement_speed <= window_bottom - paddle_height:
+            player_y += player1_movement_speed
+        elif player_move_down and player_y + player1_movement_speed >= window_bottom - paddle_height:
             player_y += window_bottom - paddle_height - player_y
 
         # Player 2
-        if player2_move_up and comp_y - player_movement_speed >= window_top:
-            comp_y -= player_movement_speed
-        elif player2_move_up and comp_y - player_movement_speed <= window_top:
+        if player2_move_up and comp_y - player2_movement_speed >= window_top:
+            comp_y -= player2_movement_speed
+        elif player2_move_up and comp_y - player2_movement_speed <= window_top:
             comp_y = window_top
-        elif player2_move_down and comp_y + player_movement_speed <= window_bottom - paddle_height:
-            comp_y += player_movement_speed
-        elif player2_move_down and comp_y + player_movement_speed >= window_bottom - paddle_height:
+        elif player2_move_down and comp_y + player2_movement_speed <= window_bottom - paddle_height:
+            comp_y += player2_movement_speed
+        elif player2_move_down and comp_y + player2_movement_speed >= window_bottom - paddle_height:
             comp_y += window_bottom - paddle_height - comp_y
 
 def draw_objects():
-    global vision_time_defined, blind_time_defined, vision_time, blind_time, sight_status, sight_cooldown, overtime, paddle_height, player_x, comp_x, player_movement_speed, modes, tutorial, selected_mode, player_score, comp_score, total_paused_time, overtime, clock_hits, ball_x_speed, ball_y_speed, ball_x, ball_y
+    global time_warped_by_p2, time_warped_by_p1, time_warp_ready_p2, time_warp_ready_p1, vision_time_defined, blind_time_defined, vision_time, blind_time, sight_status, sight_cooldown, overtime, paddle_height, player_x, comp_x, player1_movement_speed, player2_movement_speed, modes, tutorial, selected_mode, player_score, comp_score, total_paused_time, overtime, clock_hits, ball_x_speed, ball_y_speed, ball_x, ball_y
 
     window.fill(black)
     if tutorial == True:
-        tutorial_text = score_font.render("W/S or Up/Down to move", True, red)
-        tutorial_rect = tutorial_text.get_rect(bottomleft=(window_width // 2 + 10, window_height - 10))
+        tutorial_text = tutorial_font.render("W/S or Up/Down to move", True, red)
+        tutorial_rect = tutorial_text.get_rect(center=(window_width / 4, 20))
         window.blit(tutorial_text, tutorial_rect)
 
     mouse_pos = pygame.mouse.get_pos()
@@ -530,13 +537,40 @@ def draw_objects():
         cover_up2 = pygame.draw.line(window, black, (window_width // 2, 475), (window_width // 2, window_height), 1)
         player_x = 160
         comp_x = 840
-        player_movement_speed = 3
+        player1_movement_speed = 3
+        player2_movement_speed = 3
         paddle_height = 60
-    if modes[selected_mode] != 'Mini Mode':
+    if modes[selected_mode] != 'Mini Mode' and modes[selected_mode] != "Enter the Matrix":
         player_x = 50
         comp_x = 950
-        player_movement_speed = 5
+        player1_movement_speed = 5
+        player2_movement_speed = 5
         paddle_height = 75
+
+    if modes[selected_mode] == "Enter the Matrix":  # Check if the game mode is Time Warp
+
+        # Left player's time warp status
+        if time_warped_by_p1:
+            warp_text = tutorial_font.render("WARPING TIME...", True, green)
+        elif not time_warp_ready_p1:
+            warp_text = tutorial_font.render("TIME WARP ON COOLDOWN...", True, green)
+        else:
+            warp_text = tutorial_font.render("LEFT SHIFT FOR TIME WARP", True, green)
+
+        warp_text_rect = warp_text.get_rect(midtop=(window_width / 4, window_height - 20))
+        window.blit(warp_text, warp_text_rect)
+
+        # Right player's time warp status (2 player mode only)
+        if selected_players == 1:
+            if time_warped_by_p2:
+                warp_text = tutorial_font.render("WARPING TIME...", True, white)
+            elif not time_warp_ready_p2:
+                warp_text = tutorial_font.render("TIME WARP ON COOLDOWN...", True, white)
+            else:
+                warp_text = tutorial_font.render("RIGHT SHIFT FOR TIME WARP", True, white)
+
+            warp_text_rect = warp_text.get_rect(midtop=(window_width * 3 / 4, window_height - 20))
+            window.blit(warp_text, warp_text_rect)
 
     if modes[selected_mode] == "Going Blind?":
         if sight_status == "Vision" and len(sight_cooldown) >= vision_time:
@@ -549,11 +583,9 @@ def draw_objects():
             sight_cooldown.clear()
         if not vision_time_defined:
             vision_time = random.randint(60, 300)
-            print(f"You can see for {vision_time * 1/60} seconds")
             vision_time_defined = True
         if not blind_time_defined:
             blind_time = random.randint(30, 60)
-            print(f"You are blind for {blind_time * 1/60} seconds")
             blind_time_defined = True
 
 
@@ -575,7 +607,7 @@ def move_computer_paddle():
             comp_y += comp_movement_speed
 
 def draw_game_over():
-    global vision_time_defined, blind_time_defined, sight_cooldown, input_list_p1, input_list_p2, tutorial, subtitle_subtitle_text, selected_players, player_score, comp_score, start_time, total_time, black_holes, selected_mode, game_over, selected_difficulty, selected_points, difficulties_unlocked, subtitle_subtitle_text
+    global time_warp_ready_p1, time_warp_ready_p2, time_warp_cooldown_p2, time_warp_cooldown_p1, time_warped_by_p1, time_warped_by_p2, vision_time_defined, blind_time_defined, sight_cooldown, input_list_p1, input_list_p2, tutorial, subtitle_subtitle_text, selected_players, player_score, comp_score, start_time, total_time, black_holes, selected_mode, game_over, selected_difficulty, selected_points, difficulties_unlocked, subtitle_subtitle_text
 
     title_font = pygame.font.Font('Atari.TTF', 20)
     subtitle_font = pygame.font.Font('Atari.TTF', 11)
@@ -586,6 +618,13 @@ def draw_game_over():
     vision_time_defined = False
     blind_time_defined = False
     sight_cooldown.clear()
+    time_warped_by_p1 = False
+    time_warped_by_p2 = False
+    time_warp_ready_p1 = False
+    time_warp_ready_p2 = False
+    time_warp_cooldown_p1.clear()
+    time_warp_cooldown_p2.clear()
+
 
     if selected_players == 0:
         if player_score >= points_to_win:
@@ -716,7 +755,7 @@ def draw_game_over():
         clock.tick(60)
 
 def show_main_menu():
-    global player_x, paddle_height, player_movement_speed, comp_x, black_holes, selected_mode, total_time, start_time, timing, modes
+    global player_x, paddle_height, player1_movement_speed, player2_movement_speed, comp_x, black_holes, selected_mode, total_time, start_time, timing, modes
 
     menu_font = pygame.font.Font('Atari.TTF', 20)
     title_font = pygame.font.Font('Atari.TTF', 28)
@@ -804,7 +843,7 @@ def show_main_menu():
         clock.tick(60)
 
 def show_pause_menu():
-    global vision_time_defined, blind_time_defined, sight_cooldown, tutorial, mid_game, total_paused_time, pause_button_clicked, playing, timing, start_time, total_time, paused_at, pause_duration, modes, selected_mode
+    global time_warp_ready_p1, time_warp_ready_p2, time_warp_cooldown_p2, time_warp_cooldown_p1, time_warped_by_p1, time_warped_by_p2, vision_time_defined, blind_time_defined, sight_cooldown, tutorial, mid_game, total_paused_time, pause_button_clicked, playing, timing, start_time, total_time, paused_at, pause_duration, modes, selected_mode
 
     title_font = pygame.font.Font('Atari.TTF', 25)
     menu_font = pygame.font.Font('Atari.TTF', 20)
@@ -850,6 +889,12 @@ def show_pause_menu():
                     vision_time_defined = False
                     blind_time_defined = False
                     sight_cooldown.clear()
+                    time_warped_by_p1 = False
+                    time_warped_by_p2 = False
+                    time_warp_ready_p1 = False
+                    time_warp_ready_p2 = False
+                    time_warp_cooldown_p1.clear()
+                    time_warp_cooldown_p2.clear()
                     return  # Resume the game
 
                 if quit_button_rect.collidepoint(mouse_pos):
@@ -886,7 +931,7 @@ def show_pause_menu():
         clock.tick(60)
 
 def show_settings_menu():
-    global selected_players, modes, selected_mode, difficulties_unlocked, comp_movement_speed, points_to_win, player_movement_speed, selected_difficulty, selected_points
+    global selected_players, modes, selected_mode, difficulties_unlocked, comp_movement_speed, points_to_win, player1_movement_speed, player2_movement_speed, selected_difficulty, selected_points
 
     difficulties = ["Easy"]
     if difficulties_unlocked == 1:
@@ -1025,7 +1070,34 @@ while True:
     if modes[selected_mode] == 'Time Attack':
         selected_points = 7
         points_to_win = 100
+    if modes[selected_mode] == "Enter the Matrix" and not time_warp_ready_p1:
+        time_warp_cooldown_p1.append("+1")
+    if modes[selected_mode] == "Enter the Matrix" and not time_warp_ready_p2:
+        time_warp_cooldown_p2.append("+1")
+    if len(time_warp_cooldown_p1) >= fps * 7 and not time_warp_ready_p1:
+        time_warp_ready_p1 = True
+        time_warp_cooldown_p1.clear()
+    if len(time_warp_cooldown_p1) >= fps * 3 and time_warped_by_p1:
+        time_warped_by_p1 = False
+        time_warp_cooldown_p1.clear()
+        player1_movement_speed = 5
+    if len(time_warp_cooldown_p2) >= fps * 7 and not time_warp_ready_p2:
+        time_warp_ready_p2 = True
+        time_warp_cooldown_p2.clear()
+    if len(time_warp_cooldown_p2) >= fps * 3 and time_warped_by_p2:
+        time_warped_by_p2 = False
+        time_warp_cooldown_p2.clear()
 
+    if time_warped_by_p1:
+        fps = 20
+        player1_movement_speed = 15
+    if time_warped_by_p2:
+        fps = 20
+        player2_movement_speed = 15
+    if not time_warped_by_p1 and not time_warped_by_p2 and modes[selected_mode] != "Mini Mode":
+        fps = 60
+        player1_movement_speed = 5
+        player2_movement_speed = 5
 
     if not playing:
         playing = show_main_menu()
@@ -1044,6 +1116,9 @@ while True:
                     player_move_up = True
                 elif event.key == pygame.K_s or event.key == pygame.K_DOWN:
                     player_move_down = True
+                elif event.key == pygame.K_LSHIFT and time_warp_ready_p1:
+                    time_warped_by_p1 = True
+                    time_warp_ready_p1 = False
 
             # Keyup events
             if event.type == pygame.KEYUP:
@@ -1059,6 +1134,9 @@ while True:
                     player_move_up = True
                 elif event.key == pygame.K_s:
                     player_move_down = True
+                elif event.key == pygame.K_LSHIFT and time_warp_ready_p1 and not time_warped_by_p2:
+                    time_warped_by_p1 = True
+                    time_warp_ready_p1 = False
 
             # P2 Keydown events
             if event.type == pygame.KEYDOWN:
@@ -1066,6 +1144,9 @@ while True:
                     player2_move_up = True
                 elif event.key == pygame.K_DOWN:
                     player2_move_down = True
+                elif event.key == pygame.K_RSHIFT and time_warp_ready_p2 and not time_warped_by_p1:
+                    time_warped_by_p2 = True
+                    time_warp_ready_p2 = False
 
             # P1 Keyup events
             if event.type == pygame.KEYUP:
