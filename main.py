@@ -3,6 +3,7 @@ import sys
 import pygame
 import time
 import math
+import json
 
 pygame.init()
 pygame.mixer.init()
@@ -11,7 +12,7 @@ pygame.mixer.init()
 window_width = 1000
 window_height = 600
 window = pygame.display.set_mode((window_width, window_height))
-pygame.display.set_caption("Pong To Its Limit")
+pygame.display.set_caption("Pong But Its Better")
 window_top = 0
 window_bottom = window_height
 window_left = 0
@@ -136,6 +137,37 @@ game_over = False
 # TUTORIAL
 tutorial = True
 
+def save_game():
+    data = {
+        "difficulties_unlocked": int(difficulties_unlocked),
+        "selected_difficulty": int(selected_difficulty),
+        "selected_players": int(selected_players),
+        "selected_points": int(selected_points),
+        "selected_mode": int(selected_mode),
+    }
+    with open("game_progress.json", "w") as f:
+        json.dump(data, f)
+
+def load_game():
+    global difficulties_unlocked, selected_difficulty, selected_players, selected_points, selected_mode
+    try:
+        with open("game_progress.json", "r") as f:
+            loaded_data = json.load(f)
+            difficulties_unlocked = int(loaded_data.get("difficulties_unlocked", 0))
+            selected_difficulty = int(loaded_data.get("selected_difficulty", 0))
+            selected_players = int(loaded_data.get("selected_players", 0))
+            selected_points = int(loaded_data.get("selected_points", 0))
+            selected_mode = int(loaded_data.get("selected_mode", 0))
+    except FileNotFoundError:
+        # If the file doesn't exist, set all variables to default values.
+        difficulties_unlocked = 0
+        selected_difficulty = 0
+        selected_points = 5
+        selected_players = 0
+        selected_mode = 0
+
+load_game()
+
 def angle_from_collision(next_ball_x, next_ball_y):
     global ball_x_speed, ball_y_speed
 
@@ -248,8 +280,13 @@ def update_ball():
     angle_from_collision_computer(next_ball_x, next_ball_y)
 
     # WINDOW COLLISIONS
-    if next_ball_y >= window_bottom - 5 or next_ball_y <= window_top + 5:
+    if next_ball_y >= window_bottom - 5:
         ball_y_speed = -ball_y_speed
+        ball_y = window_bottom * 2 - ball_y
+
+    if next_ball_y <= window_top + 5:
+        ball_y_speed = -ball_y_speed
+        ball_y = abs(ball_y)
 
     if ball_x >= window_right:
         player_score += 1
@@ -305,14 +342,6 @@ def update_ball():
 
             if distance > threshold:
                 teleports = 0
-
-    # Apply maximum speed limit
-    max_speed = 8
-    ball_speed = (ball_x_speed ** 2 + ball_y_speed ** 2) ** 0.5
-    if ball_stuck < 240:
-        if ball_speed > max_speed:
-            ball_x_speed = (ball_x_speed / ball_speed) * max_speed
-            ball_y_speed = (ball_y_speed / ball_speed) * max_speed
 
     ball_x += ball_x_speed
     ball_y += ball_y_speed
@@ -469,7 +498,6 @@ def draw_objects():
     pygame.draw.rect(window, pause_color, (10, 10, 2, 10))
     pygame.draw.rect(window, pause_color, (15, 10, 2, 10))
 
-
     # Draw black holes
     for black_hole in black_holes:
         black_hole_image = pygame.image.load("Black Hole.png")
@@ -483,21 +511,26 @@ def draw_objects():
         pygame.draw.rect(window, white, (player_x, player_y, paddle_width, paddle_height), 2)  # Player's paddle
         pygame.draw.rect(window, white, (comp_x, comp_y, paddle_width, paddle_height), 2)  # Computer's paddle
 
+
         # Draw scores
         player_score_text = score_font.render(str(player_score), True, white)
         comp_score_text = score_font.render(str(comp_score), True, white)
         window.blit(player_score_text, (window_width // 2 - 47, 10))
         window.blit(comp_score_text, (window_width // 2 + 20, 10))
 
-    if modes[selected_mode] == 'Time Attack':
-        # Draw countdown timer
-        time_remaining = max(0, (total_time - (pygame.time.get_ticks() - start_time) + total_paused_time + clock_hits * 5000) // 1000)
-        timer_text = score_font.render(str(time_remaining), True, white)
-        timer_rect = timer_text.get_rect(topright=(window_width - 10, 10))
-        if overtime:
-            cover_up = pygame.draw.rect(window, black, timer_rect)
-            timer_text = score_font.render("OVERTIME", True, white)
-        window.blit(timer_text, timer_rect)
+        if modes[selected_mode] == 'Time Attack':
+            # Draw countdown timer
+            time_remaining = max(0, (total_time - (pygame.time.get_ticks() - start_time) + total_paused_time + clock_hits * 5000) // 1000)
+            timer_text = score_font.render(str(time_remaining), True, white)
+            timer_rect = timer_text.get_rect(center=(window_width * 3 / 4, 20))
+            if overtime:
+                cover_up = pygame.draw.rect(window, black, timer_rect)
+                timer_text = score_font.render("OVERTIME", True, white)  # Display "OVERTIME" instead of the timer text
+            window.blit(timer_text, timer_rect)
+
+            # Check if the timer has reached zero and the scores are equal
+            if time_remaining <= 0 and player_score == comp_score:
+                overtime = True
 
         # Check if the timer has reached zero
         if time_remaining == 0 and player_score != comp_score and modes[selected_mode] == 'Time Attack':
@@ -530,6 +563,10 @@ def draw_objects():
 
         # Draw center line
         pygame.draw.line(window, white, (window_width // 2, 0), (window_width // 2, window_height), 1)
+
+        # Draw top and bottom lines
+        pygame.draw.line(window, white, (0, 1), (window_width, 1))
+        pygame.draw.line(window, white, (0, window_height - 1), (window_width, window_height - 1), 1)
 
     if modes[selected_mode] == "Mini Mode":
         border = pygame.draw.rect(window, white, (125, 125, 750, 350), 10)
@@ -638,7 +675,7 @@ def draw_game_over():
         if player_score >= points_to_win:
             game_over_text = title_font.render("YOU WIN!", True, white)
             if selected_difficulty == 0:
-                game_over_subtitle = subtitle_font.render("EZ win, but wait 'til you get to Asian *foreshadowing.", True, white)
+                game_over_subtitle = subtitle_font.render("EZ win, but wait 'til you get to the last difficulty...", True, white)
                 if difficulties_unlocked == 0:
                     difficulties_unlocked += 1
                     subtitle_subtitle_text = subtitle_font.render("Beat the Medium Difficulty. It's in your settings", True, blue)
@@ -700,6 +737,7 @@ def draw_game_over():
     while game_over:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                save_game()
                 pygame.quit()
                 sys.exit()
 
@@ -799,6 +837,7 @@ def show_main_menu():
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                save_game()
                 pygame.quit()
                 sys.exit()
 
@@ -818,8 +857,11 @@ def show_main_menu():
 
                 if settings_button_rect.collidepoint(mouse_pos):
                     show_settings_menu()
+                    if modes[selected_mode] == "Time Attack":
+                        selected_points = 7
 
                 if quit_button_rect.collidepoint(mouse_pos):
+                    save_game()
                     pygame.quit()
                     sys.exit()
 
@@ -881,6 +923,7 @@ def show_pause_menu():
             pause_duration = pygame.time.get_ticks() - paused_at
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                save_game()
                 pygame.quit()
                 sys.exit()
 
@@ -890,7 +933,7 @@ def show_pause_menu():
                 if resume_button_rect.collidepoint(mouse_pos):
                     if not timing:
                         timing = True
-                        total_time = 1
+                        total_time = 60000
                     if mid_game == True:
                         total_paused_time += pause_duration
                     mid_game = True
@@ -973,6 +1016,7 @@ def show_settings_menu():
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                save_game()
                 pygame.quit()
                 sys.exit()
 
@@ -982,13 +1026,16 @@ def show_settings_menu():
                 if difficulty_rect.collidepoint(mouse_pos):
                     selected_difficulty = (selected_difficulty + 1) % len(difficulties)
 
-                if points_rect.collidepoint(mouse_pos) and modes[selected_mode] != 'Time Attack':
+                if points_rect.collidepoint(mouse_pos):
                     selected_points = (selected_points + 1) % len(points)
 
-                if modes[selected_mode] == 'Time Attack':
-                    selected_points = 7
-
                 if game_mode_rect.collidepoint(mouse_pos):
+                    if selected_mode == len(modes) - 2:
+                        print("good job")
+                        save_game()
+                    if modes[selected_mode] == "Time Attack":
+                        load_game()
+                        selected_mode = (selected_mode + 1) % len(modes)
                     selected_mode = (selected_mode + 1) % len(modes)
 
                 if players_rect.collidepoint(mouse_pos):
@@ -1023,7 +1070,10 @@ def show_settings_menu():
         players_color = grey if players_hover else white
 
         difficulty_text = menu_font.render(f"Difficulty: {difficulties[selected_difficulty]}", True, difficulty_color)
-        points_text = menu_font.render(f"Points to Win: {points[selected_points]}", True, points_color)
+        if modes[selected_mode] != "Time Attack":
+            points_text = menu_font.render(f"Points to Win: {points[selected_points]}", True, points_color)
+        if modes[selected_mode] == "Time Attack":
+            points_text = menu_font.render("Points to Win: INFINITE", True, points_color)
         game_mode_text = menu_font.render(f"Game Mode: {modes[selected_mode]}", True, game_mode_color)
         players_text = menu_font.render(f"Number of Players: {players[selected_players]}", True, players_color)
 
@@ -1031,8 +1081,7 @@ def show_settings_menu():
         window.fill(black)
         window.blit(settings_title, (window_width // 2 - settings_title.get_width() // 2, 50))
         window.blit(difficulty_text, difficulty_rect)
-        if modes[selected_mode] != 'Time Attack':
-            window.blit(points_text, points_rect)
+        window.blit(points_text, points_rect)
         window.blit(game_mode_text, game_mode_rect)
         window.blit(players_text, players_rect)
         window.blit(save_text, save_rect)
@@ -1053,7 +1102,8 @@ def reset_ball():
     ball_respawn_timer = time.time()
 
 def reset_game():
-    global clock_hits, total_paused_time, player_score, comp_score, game_over, player_x, player_y, comp_x, comp_y, modes, selected_mode
+    global clock_hits, total_paused_time, player_score, comp_score, game_over, player_x, player_y, comp_x, comp_y, modes, selected_mode, overtime
+    overtime = False
     player_score = 0
     comp_score = 0
     total_paused_time = 0
@@ -1114,6 +1164,7 @@ while True:
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
+            save_game()
             pygame.quit()
             sys.exit()
 
