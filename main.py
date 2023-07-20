@@ -532,30 +532,30 @@ def draw_objects():
             if time_remaining <= 0 and player_score == comp_score:
                 overtime = True
 
-        # Check if the timer has reached zero
-        if time_remaining == 0 and player_score != comp_score and modes[selected_mode] == 'Time Attack':
-            game_over = True
-            if player_score > comp_score:
-                player_score = points_to_win
-                draw_game_over()
-            if comp_score > player_score:
-                comp_score = points_to_win
-                draw_game_over()
-            if player_score == comp_score:
-                overtime = True
+            # Check if the timer has reached zero
+            if time_remaining == 0 and player_score != comp_score and modes[selected_mode] == 'Time Attack':
+                game_over = True
+                if player_score > comp_score:
+                    player_score = points_to_win
+                    draw_game_over()
+                if comp_score > player_score:
+                    comp_score = points_to_win
+                    draw_game_over()
+                if player_score == comp_score:
+                    overtime = True
 
-        # Draw clocks
-        for clock in clocks:
-            clock_image = pygame.image.load("clock.png")
-            clock_image = pygame.transform.scale(clock_image, (2 * clock['radius'], 2 * clock['radius']))
-            clock_rect = clock_image.get_rect()
-            if abs(math.hypot(clock['x'] - ball_x, clock['y'] - ball_y)) <= 20:
-                clock['x'] = random.randint(100, window_width - 100)
-                clock['y'] = random.randint(100, window_height - 100)
-                clock_hits += 1
-            clock_rect.center = (clock['x'], clock['y'])
-            if not overtime:
-                window.blit(clock_image, clock_rect)
+            # Draw clocks
+            for clock in clocks:
+                clock_image = pygame.image.load("clock.png")
+                clock_image = pygame.transform.scale(clock_image, (2 * clock['radius'], 2 * clock['radius']))
+                clock_rect = clock_image.get_rect()
+                if abs(math.hypot(clock['x'] - ball_x, clock['y'] - ball_y)) <= 20:
+                    clock['x'] = random.randint(100, window_width - 100)
+                    clock['y'] = random.randint(100, window_height - 100)
+                    clock_hits += 1
+                clock_rect.center = (clock['x'], clock['y'])
+                if not overtime:
+                    window.blit(clock_image, clock_rect)
 
     if modes[selected_mode] == "Going Blind?" and sight_status == "Vision" or modes[selected_mode] != "Going Blind?":
         # Draw ball
@@ -563,10 +563,6 @@ def draw_objects():
 
         # Draw center line
         pygame.draw.line(window, white, (window_width // 2, 0), (window_width // 2, window_height), 1)
-
-        # Draw top and bottom lines
-        pygame.draw.line(window, white, (0, 1), (window_width, 1))
-        pygame.draw.line(window, white, (0, window_height - 1), (window_width, window_height - 1), 1)
 
     if modes[selected_mode] == "Mini Mode":
         border = pygame.draw.rect(window, white, (125, 125, 750, 350), 10)
@@ -1031,7 +1027,6 @@ def show_settings_menu():
 
                 if game_mode_rect.collidepoint(mouse_pos):
                     if selected_mode == len(modes) - 2:
-                        print("good job")
                         save_game()
                     if modes[selected_mode] == "Time Attack":
                         load_game()
