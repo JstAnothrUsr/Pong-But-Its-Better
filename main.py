@@ -98,7 +98,7 @@ selected_difficulty = 0
 selected_points = 5
 selected_players = 0
 selected_mode = 0
-modes = ["Normal", "Confused Keyboard", "Black Holes", "Mini Mode", "Going Blind?", "Enter the Matrix", "Light Lag", "McDonald's Lag", "Moon Lag", "Mars Lag", "Time Attack"]
+modes = ["Normal", "Confused Keyboard", "Black Holes", "Mini Mode", "Going Blind?", "Enter the Matrix", "Smash", "Light Lag", "McDonald's Lag", "Moon Lag", "Mars Lag", "Time Attack"]
 
 # PADDLE MOVEMENT
 player_move_up = False
@@ -122,6 +122,16 @@ time_warped_by_p1 = False
 time_warped_by_p2 = False
 time_warp_cooldown_p1 = []
 time_warp_cooldown_p2 = []
+
+# SMASH
+smash_ready_p1 = False
+smash_ready_p2 = False
+p1_smash_active = False
+p2_smash_active = False
+p1_smashed = False
+p2_smashed = False
+smash_cooldown_p1 = []
+smash_cooldown_p2 = []
 
 # SCORE FONT
 score_font = pygame.font.Font('Atari.TTF', 20)
@@ -169,19 +179,21 @@ def load_game():
 load_game()
 
 def angle_from_collision(next_ball_x, next_ball_y):
-    global ball_x_speed, ball_y_speed
-
+    global player1_movement_speed, player2_movement_speed, ball_x_speed, ball_y_speed, p1_smashed, p2_smashed, p1_smash_active, p2_smash_active, fps
+    
     player_paddle_rect = pygame.Rect(player_x, player_y, paddle_width, paddle_height)
     collision = player_paddle_rect.collidepoint(next_ball_x, next_ball_y)
 
     if collision:
+        if modes[selected_mode] == "Smash":
+            if p1_smash_active:
+                p1_smashed = True
+                p2_smashed = False
+                p1_smash_active = False
+            if not p1_smash_active and p2_smashed:
+                p2_smashed = False
+
         ball_x_speed = -1 * (ball_x - (paddle_width + player_x))
-
-    if ball_x_speed >= 8 or ball_y_speed >= 8:
-        ball_x_speed = 0.9 * ball_x_speed
-        ball_y_speed = 0.9 * ball_y_speed
-
-    if collision:
         paddle_center_x = player_x
         paddle_center_y = player_y + paddle_height / 2
         dist_x = next_ball_x - paddle_center_x
@@ -190,19 +202,24 @@ def angle_from_collision(next_ball_x, next_ball_y):
         ball_y_speed = dist_y * 0.25
 
 def angle_from_collision_computer(next_ball_x, next_ball_y):
-    global ball_x_speed, ball_y_speed
+    global player1_movement_speed, player2_movement_speed, fps, ball_x_speed, ball_y_speed, p1_smashed, p1_smash_active, p2_smashed, p2_smash_active
 
     comp_paddle_rect = pygame.Rect(comp_x, comp_y, paddle_width, paddle_height)
     collision = comp_paddle_rect.collidepoint(next_ball_x, next_ball_y)
 
     if collision:
         ball_x_speed = comp_x - ball_x
-
-    while ball_x_speed >= 8 or ball_y_speed >= 8:
-        ball_x_speed = 0.9 * ball_x_speed
-        ball_y_speed = 0.9 * ball_y_speed
-
-    if collision:
+        if modes[selected_mode] == "Smash":
+            if p2_smash_active:
+                p1_smashed = False
+                p2_smashed = True
+                p2_smash_active = False
+                ball_x_speed *= 5000
+                ball_y_speed *= 5000
+            if not p2_smash_active and p1_smashed:
+                p1_smashed = False
+                ball_x_speed /= 3
+                ball_y_speed /= 3
         paddle_center_x = comp_x + paddle_width
         paddle_center_y = comp_y + paddle_height / 2
         dist_x = paddle_center_x - next_ball_x
@@ -259,9 +276,9 @@ def lines_intersect(line1_start, line1_end, line2_start, line2_end):
     return False
 
 def update_ball():
-    global window_top, window_bottom, window_left, window_right, modes, selected_mode, teleports, overtime, ball_stuck, ball_x, ball_y, ball_x_speed, ball_y_speed, paddle_collisions, player_score, comp_score, ball_respawn_timer, game_over
+    global player1_movement_speed, player2_movement_speed, p2_smashed, fps, p1_smashed, window_top, window_bottom, window_left, window_right, modes, selected_mode, teleports, overtime, ball_stuck, ball_x, ball_y, ball_x_speed, ball_y_speed, paddle_collisions, player_score, comp_score, ball_respawn_timer, game_over
 
-    next_ball_x = ball_x + ball_x_speed  # Calculate next frame position of the ball
+    next_ball_x = ball_x + ball_x_speed
     next_ball_y = ball_y + ball_y_speed
 
     if modes[selected_mode] != "Mini Mode":
@@ -294,6 +311,11 @@ def update_ball():
         if overtime:
             player_score = points_to_win
             draw_game_over()
+        if modes[selected_mode] == "Smash" and (p1_smashed or p2_smashed):
+            p1_smashed = False
+            p2_smashed = False
+            ball_x_speed *= 3 / 5
+            ball_y_speed *= 3 / 5
 
     elif ball_x <= window_left:
         comp_score += 1
@@ -345,6 +367,11 @@ def update_ball():
 
     ball_x += ball_x_speed
     ball_y += ball_y_speed
+
+    if p1_smashed or p2_smashed:
+        ball_x += ball_x_speed * 1
+        ball_y += ball_y_speed * 1
+
 
     if player_score >= points_to_win or comp_score >= points_to_win:
         game_over = True
@@ -508,8 +535,15 @@ def draw_objects():
         window.blit(black_hole_image, black_hole_rect)
 
     if modes[selected_mode] == "Going Blind?" and sight_status == "Vision" or modes[selected_mode] != "Going Blind?":
-        pygame.draw.rect(window, white, (player_x, player_y, paddle_width, paddle_height), 2)  # Player's paddle
-        pygame.draw.rect(window, white, (comp_x, comp_y, paddle_width, paddle_height), 2)  # Computer's paddle
+        p1_color = white
+        p2_color = white
+        if modes[selected_mode] == "Smash":
+            if p1_smash_active:
+                p1_color = red
+            if p2_smash_active:
+                p2_color = red
+        pygame.draw.rect(window, p1_color, (player_x, player_y, paddle_width, paddle_height), 2)  # Player's paddle
+        pygame.draw.rect(window, p2_color, (comp_x, comp_y, paddle_width, paddle_height), 2)  # Computer's paddle
 
 
         # Draw scores
@@ -580,7 +614,31 @@ def draw_objects():
         player2_movement_speed = 5
         paddle_height = 75
 
-    if modes[selected_mode] == "Enter the Matrix":  # Check if the game mode is Time Warp
+    if modes[selected_mode] == "Smash":
+
+        # Left player's smash status
+        if p1_smash_active:
+            smash_text = tutorial_font.render("SMASHING...", True, red)
+        elif not smash_ready_p1:
+            smash_text = tutorial_font.render("SMASH ON COOLDOWN...", True, red)
+        if smash_ready_p1:
+            smash_text = tutorial_font.render("LEFT SHIFT TO SMASH", True, red)
+
+        smash_text_rect = smash_text.get_rect(midtop=(window_width / 4, window_height - 20))
+        window.blit(smash_text, smash_text_rect)
+
+        # Right player's smash status (2 player mode only)
+        if p2_smash_active:
+            smash_text = tutorial_font.render("SMASHING...", True, red)
+        elif not smash_ready_p2:
+            smash_text = tutorial_font.render("SMASH ON COOLDOWN...", True, red)
+        elif smash_ready_p2:
+            smash_text = tutorial_font.render("RIGHT SHIFT TO SMASH", True, red)
+
+        smash_text_rect = smash_text.get_rect(midtop=(window_width * 3 / 4, window_height - 20))
+        window.blit(smash_text, smash_text_rect)
+
+    if modes[selected_mode] == "Enter the Matrix":
 
         # Left player's time warp status
         if time_warped_by_p1:
@@ -596,11 +654,11 @@ def draw_objects():
         # Right player's time warp status (2 player mode only)
         if selected_players == 1:
             if time_warped_by_p2:
-                warp_text = tutorial_font.render("WARPING TIME...", True, white)
+                warp_text = tutorial_font.render("WARPING TIME...", True, green)
             elif not time_warp_ready_p2:
-                warp_text = tutorial_font.render("TIME WARP ON COOLDOWN...", True, white)
+                warp_text = tutorial_font.render("TIME WARP ON COOLDOWN...", True, green)
             else:
-                warp_text = tutorial_font.render("RIGHT SHIFT FOR TIME WARP", True, white)
+                warp_text = tutorial_font.render("RIGHT SHIFT FOR TIME WARP", True, green)
 
             warp_text_rect = warp_text.get_rect(midtop=(window_width * 3 / 4, window_height - 20))
             window.blit(warp_text, warp_text_rect)
@@ -615,17 +673,17 @@ def draw_objects():
             sight_status = "Vision"
             sight_cooldown.clear()
         if not vision_time_defined:
-            vision_time = random.randint(60, 300)
+            vision_time = random.randint(fps, fps * 5)
             vision_time_defined = True
         if not blind_time_defined:
-            blind_time = random.randint(30, 60)
+            blind_time = random.randint(fps / 2, fps)
             blind_time_defined = True
 
 
     pygame.display.update()
 
 def move_computer_paddle():
-    global comp_y, window_top, window_bottom, selected_difficulty
+    global comp_y, window_top, window_bottom, selected_difficulty, smash_ready_p2, p2_smash_active
 
     # Calculate predicted position of the ball
     if ball_x_speed != 0:
@@ -648,30 +706,19 @@ def move_computer_paddle():
             comp_y += comp_movement_speed
 
 def draw_game_over():
-    global time_warp_ready_p1, time_warp_ready_p2, time_warp_cooldown_p2, time_warp_cooldown_p1, time_warped_by_p1, time_warped_by_p2, vision_time_defined, blind_time_defined, sight_cooldown, input_list_p1, input_list_p2, tutorial, subtitle_subtitle_text, selected_players, player_score, comp_score, start_time, total_time, black_holes, selected_mode, game_over, selected_difficulty, selected_points, difficulties_unlocked, subtitle_subtitle_text
+    global tutorial, subtitle_subtitle_text, selected_players, player_score, comp_score, start_time, total_time, black_holes, selected_mode, game_over, selected_difficulty, selected_points, difficulties_unlocked, subtitle_subtitle_text
 
     title_font = pygame.font.Font('Atari.TTF', 20)
     subtitle_font = pygame.font.Font('Atari.TTF', 11)
     tutorial = False
     subtitle_subtitle_text = subtitle_font.render("", True, blue)
-    input_list_p1.clear()
-    input_list_p2.clear()
-    vision_time_defined = False
-    blind_time_defined = False
-    sight_cooldown.clear()
-    time_warped_by_p1 = False
-    time_warped_by_p2 = False
-    time_warp_ready_p1 = False
-    time_warp_ready_p2 = False
-    time_warp_cooldown_p1.clear()
-    time_warp_cooldown_p2.clear()
 
 
     if selected_players == 0:
         if player_score >= points_to_win:
             game_over_text = title_font.render("YOU WIN!", True, white)
             if selected_difficulty == 0:
-                game_over_subtitle = subtitle_font.render("EZ win, but wait 'til you get to the last difficulty...", True, white)
+                game_over_subtitle = subtitle_font.render("EZ win, but wait 'til you get to Asian *foreshadowing.", True, white)
                 if difficulties_unlocked == 0:
                     difficulties_unlocked += 1
                     subtitle_subtitle_text = subtitle_font.render("Beat the Medium Difficulty. It's in your settings", True, blue)
@@ -702,9 +749,9 @@ def draw_game_over():
         game_over_subtitle = score_font.render("", True, white)
         subtitle_subtitle_text = score_font.render("", True, white)
         if player_score >= points_to_win:
-            game_over_text = title_font.render("Player 1 Wins!", True, white)
+            game_over_text = title_font.render("PLAYER 1 WINS!", True, white)
         if comp_score >= points_to_win:
-            game_over_text = title_font.render("Player 2 Wins!", True, white)
+            game_over_text = title_font.render("PLAYER 2 WINS!", True, white)
 
     question_text = score_font.render("Play again?", True, white)
     yes_text = score_font.render("Yes", True, white)
@@ -733,7 +780,6 @@ def draw_game_over():
     while game_over:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                save_game()
                 pygame.quit()
                 sys.exit()
 
@@ -742,11 +788,11 @@ def draw_game_over():
 
                 if yes_rect.collidepoint(mouse_pos):
                     black_holes.clear()
-                    clocks.clear()
                     if modes[selected_mode] == 'Black Holes':
                         create_black_holes()
                     if modes[selected_mode] == 'Time Attack':
                         create_clocks()
+                        # TIMER
                         start_time = pygame.time.get_ticks()
                         total_time = 60000
                     window.fill(black)
@@ -936,19 +982,12 @@ def show_pause_menu():
                     vision_time_defined = False
                     blind_time_defined = False
                     sight_cooldown.clear()
-                    time_warped_by_p1 = False
-                    time_warped_by_p2 = False
-                    time_warp_ready_p1 = False
-                    time_warp_ready_p2 = False
-                    time_warp_cooldown_p1.clear()
-                    time_warp_cooldown_p2.clear()
                     return  # Resume the game
 
                 if quit_button_rect.collidepoint(mouse_pos):
                     mid_game = False
                     tutorial = False
                     show_main_menu()
-                    reset_ball()
                     reset_game()
 
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -1083,8 +1122,10 @@ def show_settings_menu():
         pygame.display.flip()
 
 def reset_ball():
-    global ball_x, ball_y, ball_x_speed, ball_y_speed, ball_respawn_timer
+    global ball_x, ball_y, ball_x_speed, ball_y_speed, ball_respawn_timer, p1_smashed, p2_smashed
 
+    p1_smashed = False
+    p2_smashed = False
     ball_x = 500
     ball_y = 300
     # Ball must go towards comp on start to avoid startling the player
@@ -1097,8 +1138,19 @@ def reset_ball():
     ball_respawn_timer = time.time()
 
 def reset_game():
-    global clock_hits, total_paused_time, player_score, comp_score, game_over, player_x, player_y, comp_x, comp_y, modes, selected_mode, overtime
+    global vision_time_defined, blind_time_defined, time_warped_by_p1, time_warped_by_p2, time_warp_ready_p1, time_warp_ready_p2, total_time, start_time, smash_ready_p1, smash_ready_p2, p1_smashed, p2_smashed, p1_smash_active, p2_smash_active, smash_cooldown_p1, smash_cooldown_p2, clock_hits, total_paused_time, player_score, comp_score, game_over, player_x, player_y, comp_x, comp_y, modes, selected_mode, overtime
     overtime = False
+    input_list_p1.clear()
+    input_list_p2.clear()
+    vision_time_defined = False
+    blind_time_defined = False
+    sight_cooldown.clear()
+    time_warped_by_p1 = False
+    time_warped_by_p2 = False
+    time_warp_ready_p1 = False
+    time_warp_ready_p2 = False
+    time_warp_cooldown_p1.clear()
+    time_warp_cooldown_p2.clear()
     player_score = 0
     comp_score = 0
     total_paused_time = 0
@@ -1107,11 +1159,18 @@ def reset_game():
     player_y = 263
     comp_x = 950
     comp_y = 263
-    if modes[selected_mode] == 'Time Attack':
-        total_time = 60000
-        start_time = pygame.time.get_ticks()
-        create_clocks()
-        clock_hits = 0
+    total_time = 60000
+    start_time = pygame.time.get_ticks()
+    create_clocks()
+    clock_hits = 0
+    smash_ready_p1 = False
+    smash_ready_p2 = False
+    p1_smash_active = False
+    p2_smash_active = False
+    p1_smashed = False
+    p2_smashed = False
+    smash_cooldown_p1.clear()
+    smash_cooldown_p2.clear()
     reset_ball()
 
 show_main_menu()
@@ -1140,7 +1199,6 @@ while True:
     if len(time_warp_cooldown_p2) >= fps * 3 and time_warped_by_p2:
         time_warped_by_p2 = False
         time_warp_cooldown_p2.clear()
-
     if time_warped_by_p1:
         fps = 20
         player1_movement_speed = 15
@@ -1151,6 +1209,18 @@ while True:
         fps = 60
         player1_movement_speed = 5
         player2_movement_speed = 5
+    if modes[selected_mode] == "Smash":
+        if not smash_ready_p1 and not p1_smash_active:
+            smash_cooldown_p1.append("+1")
+        if not smash_ready_p2 and not p2_smash_active:
+            smash_cooldown_p2.append("+1")
+    if len(smash_cooldown_p1) >= fps * 15:
+        smash_cooldown_p1.clear()
+        smash_ready_p1 = True
+    if len(smash_cooldown_p2) >= fps * 15:
+        smash_cooldown_p2.clear()
+        smash_ready_p2 = True
+
 
     if not playing:
         playing = show_main_menu()
@@ -1170,9 +1240,13 @@ while True:
                     player_move_up = True
                 elif event.key == pygame.K_s or event.key == pygame.K_DOWN:
                     player_move_down = True
-                elif event.key == pygame.K_LSHIFT and time_warp_ready_p1:
-                    time_warped_by_p1 = True
-                    time_warp_ready_p1 = False
+                elif event.key == pygame.K_LSHIFT:
+                    if time_warp_ready_p1:
+                        time_warped_by_p1 = True
+                        time_warp_ready_p1 = False
+                    if smash_ready_p1:
+                        p1_smash_active = True
+                        smash_ready_p1 = False
 
             # Keyup events
             if event.type == pygame.KEYUP:
@@ -1188,9 +1262,14 @@ while True:
                     player_move_up = True
                 elif event.key == pygame.K_s:
                     player_move_down = True
-                elif event.key == pygame.K_LSHIFT and time_warp_ready_p1 and not time_warped_by_p2:
-                    time_warped_by_p1 = True
-                    time_warp_ready_p1 = False
+                elif event.key == pygame.K_LSHIFT:
+                    if time_warp_ready_p1 and not time_warped_by_p2:
+                        time_warped_by_p1 = True
+                        time_warp_ready_p1 = False
+                    if smash_ready_p1:
+                        p1_smash_active = True
+                        smash_ready_p1 = False
+
 
             # P2 Keydown events
             if event.type == pygame.KEYDOWN:
@@ -1198,9 +1277,13 @@ while True:
                     player2_move_up = True
                 elif event.key == pygame.K_DOWN:
                     player2_move_down = True
-                elif event.key == pygame.K_RSHIFT and time_warp_ready_p2 and not time_warped_by_p1:
-                    time_warped_by_p2 = True
-                    time_warp_ready_p2 = False
+                elif event.key == pygame.K_RSHIFT:
+                    if time_warp_ready_p2 and not time_warped_by_p1:
+                        time_warped_by_p2 = True
+                        time_warp_ready_p2 = False
+                    if smash_ready_p2:
+                        p2_smash_active = True
+                        smash_ready_p2 = False
 
             # P1 Keyup events
             if event.type == pygame.KEYUP:
