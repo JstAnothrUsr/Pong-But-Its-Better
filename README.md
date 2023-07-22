@@ -1,3 +1,5 @@
+To play the game just download and unzip the zip folder, and run main.exe
+
 This is a pong game made in python/pygame.
 However the game has... a bit of a twist. 
 Play the game and go to settings, you'll see.
