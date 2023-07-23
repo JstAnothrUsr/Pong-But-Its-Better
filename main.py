@@ -45,6 +45,10 @@ clock_hits = 0
 input_list_p1 = []
 input_list_p2 = []
 
+# RANDOM MODES
+random_game = False
+random_rounds = False
+
 # COLORS
 white = (255, 255, 255)
 black = (0, 0, 0)
@@ -98,7 +102,7 @@ selected_difficulty = 0
 selected_points = 5
 selected_players = 0
 selected_mode = 0
-modes = ["Normal", "Confused Keyboard", "Black Holes", "Mini Mode", "Going Blind?", "Enter the Matrix", "Smash", "Light Lag", "McDonald's Lag", "Moon Lag", "Mars Lag", "Time Attack"]
+modes = ["Normal", "Random Every Round", "Random Every Game", "Confused Keyboard", "Black Holes", "Mini Mode", "Going Blind?", "Enter the Matrix", "Smash", "Light Lag", "McDonald's Lag", "Moon Lag", "Mars Lag", "Time Attack"]
 
 # PADDLE MOVEMENT
 player_move_up = False
@@ -718,17 +722,17 @@ def draw_game_over():
         if player_score >= points_to_win:
             game_over_text = title_font.render("YOU WIN!", True, white)
             if selected_difficulty == 0:
-                game_over_subtitle = subtitle_font.render("EZ win, but wait 'til you get to Asian *foreshadowing.", True, white)
+                game_over_subtitle = subtitle_font.render("EZ win, but wait 'til you get to the last difficulty...", True, white)
                 if difficulties_unlocked == 0:
                     difficulties_unlocked += 1
-                    subtitle_subtitle_text = subtitle_font.render("Beat the Medium Difficulty. It's in your settings", True, blue)
+                    subtitle_subtitle_text = subtitle_font.render("Beat the Medium Difficulty. It's in your settings.", True, blue)
             if selected_difficulty == 1:
-                game_over_subtitle = subtitle_font.render("Not bad, I guess....", True, white)
+                game_over_subtitle = subtitle_font.render("Not bad, I guess...", True, white)
                 if difficulties_unlocked == 1:
                     difficulties_unlocked += 1
                     subtitle_subtitle_text = subtitle_font.render("Beat the Hard Difficulty", True, blue)
             if selected_difficulty == 2:
-                game_over_subtitle = subtitle_font.render("Pretty good, but beat the final challenge now....", True, white)
+                game_over_subtitle = subtitle_font.render("Pretty good, but the final challenge remains...", True, white)
                 if difficulties_unlocked == 2:
                     difficulties_unlocked += 1
                     subtitle_subtitle_text = subtitle_font.render("BEAT ASIAN DIFFICULTY", True, blue)
@@ -843,7 +847,7 @@ def draw_game_over():
         clock.tick(60)
 
 def show_main_menu():
-    global player_x, paddle_height, player1_movement_speed, player2_movement_speed, comp_x, black_holes, selected_mode, total_time, start_time, timing, modes
+    global random_game, random_rounds, player_x, paddle_height, player1_movement_speed, player2_movement_speed, comp_x, black_holes, selected_mode, total_time, start_time, timing, modes
 
     menu_font = pygame.font.Font('Atari.TTF', 20)
     title_font = pygame.font.Font('Atari.TTF', 28)
@@ -899,6 +903,15 @@ def show_main_menu():
 
                 if settings_button_rect.collidepoint(mouse_pos):
                     show_settings_menu()
+                    if modes[selected_mode] == "Random Every Round":
+                        random_rounds = True
+                    if modes[selected_mode] == "Random Every Game":
+                        random_game = True
+                        if random_game:
+                            selected_mode = random.randint(1, len(modes) - 1)
+                            while modes[selected_mode] in ["Black Holes", "Mini Mode", "McDonald's Lag", "Mars Lag", "Moon Lag", "Time Attack", "Random Every Round", "Random Every Game"]:
+                                selected_mode = random.randint(1, len(modes) - 1)
+                                print(modes[selected_mode])
                     if modes[selected_mode] == "Time Attack":
                         selected_points = 7
 
@@ -1017,7 +1030,10 @@ def show_pause_menu():
         clock.tick(60)
 
 def show_settings_menu():
-    global selected_players, modes, selected_mode, difficulties_unlocked, comp_movement_speed, points_to_win, player1_movement_speed, player2_movement_speed, selected_difficulty, selected_points
+    global random_game, random_round, selected_players, modes, selected_mode, difficulties_unlocked, comp_movement_speed, points_to_win, player1_movement_speed, player2_movement_speed, selected_difficulty, selected_points
+
+    random_game = False
+    random_round = False
 
     difficulties = ["Easy"]
     if difficulties_unlocked == 1:
@@ -1122,23 +1138,33 @@ def show_settings_menu():
         pygame.display.flip()
 
 def reset_ball():
-    global ball_x, ball_y, ball_x_speed, ball_y_speed, ball_respawn_timer, p1_smashed, p2_smashed
+    global selected_mode, random_game, random_rounds, ball_x, ball_y, ball_x_speed, ball_y_speed, ball_respawn_timer, p1_smashed, p2_smashed
+
+    if random_rounds:
+        selected_mode = random.randint(1, len(modes) - 1)
+        while modes[selected_mode] in ["Black Holes", "Mini Mode", "McDonald's Lag", "Mars Lag", "Moon Lag", "Time Attack", "Random Every Round", "Random Every Game"]:
+            selected_mode = random.randint(1, len(modes) - 1)
+            print(modes[selected_mode])
 
     p1_smashed = False
     p2_smashed = False
     ball_x = 500
     ball_y = 300
-    # Ball must go towards comp on start to avoid startling the player
-    # and giving the computer an unfair advantage, as the computer knows (and can react to)
-    # where the ball is going as soon as the game starts but the player does not
-    ball_x_speed = random.randint(3, 8)
-    ball_y_speed = random.randint(-8, 8)
-    while -2 <= ball_y_speed <= 2:
-        ball_y_speed = random.randint(-8, 8)
+    ball_x_speed = random.randint(-4, 4)
+    ball_y_speed = random.randint(-3, 3)
+    while -2 <= ball_x_speed <= 2:
+        ball_x_speed = random.randint(-5, 5)
     ball_respawn_timer = time.time()
 
 def reset_game():
     global vision_time_defined, blind_time_defined, time_warped_by_p1, time_warped_by_p2, time_warp_ready_p1, time_warp_ready_p2, total_time, start_time, smash_ready_p1, smash_ready_p2, p1_smashed, p2_smashed, p1_smash_active, p2_smash_active, smash_cooldown_p1, smash_cooldown_p2, clock_hits, total_paused_time, player_score, comp_score, game_over, player_x, player_y, comp_x, comp_y, modes, selected_mode, overtime
+
+    if random_game:
+        selected_mode = random.randint(1, len(modes) - 1)
+        while modes[selected_mode] in ["Black Holes", "Mini Mode", "McDonald's Lag", "Mars Lag", "Moon Lag", "Time Attack", "Random Every Round", "Random Every Game"]:
+            selected_mode = random.randint(1, len(modes) - 1)
+            print(modes[selected_mode])
+
     overtime = False
     input_list_p1.clear()
     input_list_p2.clear()
